@@ -2,12 +2,40 @@
 
 import argparse
 import numpy as np
+import re
 
 parser = argparse.ArgumentParser(description='Compute the Dixon et al. (2012) directionality index')
 parser.add_argument('-i', help='input matrix', type=str, required=True, dest='i')
 parser.add_argument('-w', help='size of upstream/downstream window', type=int, default=2000000, dest='w')
 parser.add_argument('-b', help='bin size (resolution) of input matrix', type=int, default=40000, dest='b')
 args = parser.parse_args()
+
+def load_matrix(matrix):
+	'''
+	Parse input Dekker format matrix
+	'''
+	IN = open(matrix, 'r')
+	raw_x= []
+	is_header = True
+	for line in IN:
+		if '#' not in line:
+			if is_header:
+				header = line.split('\t')[1:]
+				is_header = False
+			else:
+				raw_x.append(map(lambda x: np.nan if 'nan' in x else float(x), line.split('\t')[1:]))
+	X = np.array(raw_x)
+
+	return X, header
+
+def get_chr_start_end(colname):
+	'''
+	Get chromosome and bp start and end
+	'''
+	searchObj = re.search('(chr\d+):(\d+)-(\d+)', colname)
+	return searchObj.group(1), searchObj.group(2), searchObj.group(3)
+
+	
 
 def enough_space(i, w, l):
 	'''
@@ -19,45 +47,47 @@ def enough_space(i, w, l):
 		return True
 
 def calc_DI(A, B, E):
+	'''
+	Directionality Index
+	'''
 	if B-A == 0 or E == 0:
 		return 'nan'
 	else:
 		DI = ( (B-A)/abs(B-A) ) * ( (((A-E)**2)/E) + (((B-E)**2)/E) )
 		return DI
 
+def nan_in_window(i, bin_window, row):
+	'''
+	Check for missing values in upstream and downstream windows
+	'''
+	if np.isnan(row[i-bin_window:i]).any() or np.isnan(row[i+1:i+bin_window+1]).any():
+		return True
+	else:
+		return False
 
 
 
 def main():
-	x = np.array([[np.nan,1,4,2,1],
-			  [1,3,1,1,2],
-			  [4,1,4,0,3],
-			  [2,1,0,2,4],
-			  [1,2,3,4,5]])
-
-	for i, row in enumerate(x):
-
-		if enough_space(i, args.w, len(row)):
-				if not np.isnan(row).any():
+	OUT = open('_'.join([args.i[:-7], 'dixonDI', 'w-' + str(args.w)]), 'w')
+	OUT.write('\t'.join(['chrom', 'start', 'end', 'DI']) + '\n')
+	bin_window =  args.w / args.b
+	X, header = load_matrix(args.i)
+	for i, row in enumerate(X):
+		chrom, start, end = get_chr_start_end(header[i])
+		if enough_space(i, bin_window, len(row)):
+				if not nan_in_window(i, bin_window, row):
 					# Calculate upstream (A) and downstream (B) interactions
-					A = np.sum(row[i-args.w:i])
-					B = np.sum(row[i+1 :i+args.w + 1])
+					A = np.sum(row[i-bin_window:i])
+					B = np.sum(row[i+1:i+bin_window+1])
 					# Expected number of reads (E)
 					E = (A + B) / 2		
 					# Calculate directionality index (DI)
 					DI = calc_DI(A, B, E)
-					print DI
+					OUT.write('\t'.join([chrom, start, end, str(round(DI,4))]) + '\n')			
 				else:
-					print 'nan'
-
+					OUT.write('\t'.join([chrom, start, end, 'nan']) + '\n')
 		else:
-			print 'nan'
-
-
-
-
-
-
+			OUT.write('\t'.join([chrom, start, end, 'nan']) + '\n')
 
 
 if __name__ == '__main__':
