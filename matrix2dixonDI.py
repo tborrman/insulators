@@ -78,12 +78,17 @@ def main():
 				if not nan_in_window(i, bin_window, row):
 					# Calculate upstream (A) and downstream (B) interactions
 					A = np.sum(row[i-bin_window:i])
+					print A
 					B = np.sum(row[i+1:i+bin_window+1])
+					print B
 					# Expected number of reads (E)
 					E = (A + B) / 2		
 					# Calculate directionality index (DI)
 					DI = calc_DI(A, B, E)
-					OUT.write('\t'.join([chrom, start, end, str(round(DI,4))]) + '\n')			
+					if DI != 'nan':
+						OUT.write('\t'.join([chrom, start, end, str(round(DI,4))]) + '\n')
+					else:
+						OUT.write('\t'.join([chrom, start, end, 'nan']) + '\n')			
 				else:
 					OUT.write('\t'.join([chrom, start, end, 'nan']) + '\n')
 		else:
