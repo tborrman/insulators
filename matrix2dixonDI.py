@@ -32,7 +32,7 @@ def get_chr_start_end(colname):
 	'''
 	Get chromosome and bp start and end
 	'''
-	searchObj = re.search('(chr\d+):(\d+)-(\d+)', colname)
+	searchObj = re.search('(chr[\dXY]+):(\d+)-(\d+)', colname)
 	return searchObj.group(1), searchObj.group(2), searchObj.group(3)
 
 	
