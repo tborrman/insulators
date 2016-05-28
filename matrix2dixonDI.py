@@ -23,7 +23,7 @@ def load_matrix(matrix):
 				header = line.split('\t')[1:]
 				is_header = False
 			else:
-				raw_x.append(map(lambda x: np.nan if 'nan' or 'NA' in x else float(x), line.split('\t')[1:]))
+				raw_x.append(map(lambda x: np.nan if 'nan' in x or 'NA' in x else float(x), line.split('\t')[1:]))
 	X = np.array(raw_x)
 
 	return X, header
