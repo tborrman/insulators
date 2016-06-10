@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description='Compute the Dixon et al. (2012) di
 parser.add_argument('-i', help='input matrix', type=str, required=True, dest='i')
 parser.add_argument('-w', help='size of upstream/downstream window', type=int, default=2000000, dest='w')
 parser.add_argument('-b', help='bin size (resolution) of input matrix', type=int, default=40000, dest='b')
+parser.add_argument('-n', help='should NAs be zero', type=bool, default=False, dest='n')
 args = parser.parse_args()
 
 def load_matrix(matrix):
@@ -65,13 +66,13 @@ def nan_in_window(i, bin_window, row):
 	else:
 		return False
 
-
-
 def main():
 	OUT = open('_'.join([args.i[:-7], 'dixonDI', 'w-' + str(args.w)]), 'w')
 	OUT.write('\t'.join(['chrom', 'start', 'end', 'DI']) + '\n')
 	bin_window =  args.w / args.b
 	X, header = load_matrix(args.i)
+	if args.n:
+		X = np.nan_to_num(X)
 	for i, row in enumerate(X):
 		chrom, start, end = get_chr_start_end(header[i])
 		if enough_space(i, bin_window, len(row)):
